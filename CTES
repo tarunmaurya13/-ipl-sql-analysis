@@ -1,0 +1,101 @@
+
+-------------------------------
+-- CTES
+-----------------------------
+
+-- Q1. Simple CTE — Top 5 batsmen
+WITH TopBatsmen AS (
+    SELECT Striker_Id,
+        SUM(Batsman_Scored)              AS Total_Runs
+    FROM ipl_table
+    GROUP BY Striker_Id
+)
+SELECT * FROM TopBatsmen
+ORDER BY Total_Runs DESC
+LIMIT 5;
+
+-- Q2. Two CTEs — Batting + Bowling combined
+WITH Batting AS (
+    SELECT Striker_Id AS Player_Id,
+        SUM(Batsman_Scored)              AS Runs
+    FROM ipl_table GROUP BY Striker_Id
+),
+Bowling AS (
+    SELECT Bowler_Id AS Player_Id,
+        COUNT(Player_dissmial_id)        AS Wickets
+    FROM ipl_table GROUP BY Bowler_Id
+)
+SELECT b.Player_Id, Runs, Wickets
+FROM Batting b
+JOIN Bowling bo ON b.Player_Id = bo.Player_Id
+ORDER BY Runs DESC;
+
+
+-- Q3. CTE to find economy then filter
+WITH BowlerEconomy AS (
+    SELECT Bowler_Id,
+        ROUND(SUM(Batsman_Scored + Extra_Runs) /
+        NULLIF(COUNT(DISTINCT Over_Id),0),2) AS Economy,
+        COUNT(DISTINCT Over_Id)          AS Overs
+    FROM ipl_table
+    GROUP BY Bowler_Id
+)
+SELECT * FROM BowlerEconomy
+WHERE Overs >= 5
+ORDER BY Economy ASC
+LIMIT 10;
+
+-- Q4. CTE with CASE WHEN — Phase-wise runs
+WITH PhaseRuns AS (
+    SELECT 
+        CASE 
+            WHEN Over_Id <= 6  THEN 'Powerplay'
+            WHEN Over_Id <= 15 THEN 'Middle'
+            ELSE 'Death'
+        END                              AS Phase,
+        SUM(Batsman_Scored + Extra_Runs) AS Runs
+    FROM ipl_table
+    GROUP BY Phase
+)
+SELECT * FROM PhaseRuns
+ORDER BY Runs DESC;
+
+-- Q5. CTE chain — Best over per match
+WITH OverRuns AS (
+    SELECT Match_Id, Over_Id,
+        SUM(Batsman_Scored + Extra_Runs) AS Runs
+    FROM ipl_table
+    GROUP BY Match_Id, Over_Id
+),
+RankedOvers AS (
+    SELECT *,
+        RANK() OVER(PARTITION BY Match_Id 
+             ORDER BY Runs DESC)         AS RNK
+    FROM OverRuns
+)
+SELECT * FROM RankedOvers
+WHERE RNK = 1;
+
+-- Q6. Recursive CTE — Over number sequence 1 to 20
+WITH RECURSIVE OverSequence AS (
+    SELECT 1                             AS Over_Num  -- Base
+    UNION ALL
+    SELECT Over_Num + 1                              -- Recursive
+    FROM OverSequence
+    WHERE Over_Num < 20
+)
+SELECT * FROM OverSequence;
+
+-- Q7. CTE — Player of Match score
+WITH POM AS (
+    SELECT Match_Id, Striker_Id AS Player_Id,
+        SUM(Batsman_Scored) * 1 +
+        COUNT(Player_dissmial_id) * 25          AS Score
+    FROM ipl_table
+    GROUP BY Match_Id, Striker_Id
+)
+SELECT Match_Id, Player_Id,
+    MAX(Score)                           AS POM_Score
+FROM POM
+GROUP BY Match_Id
+ORDER BY Match_Id;
