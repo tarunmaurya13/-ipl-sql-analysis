@@ -1,0 +1,109 @@
+USE ipl;
+--------------------------------------------
+WINDOW FUNCTIONS
+------------------------------------------
+-- Q1. Running total of runs ball by ball
+
+SELECT Match_Id , Innings_Id , Ball_Id ,
+Batsman_Scored ,
+SUM(Batsman_Scored ) OVER(PARTITION BY Match_Id ,
+Innings_Id
+ORDER BY Over_Id , Ball_Id ) AS Running_Total
+FROM ipl_Table;
+
+-- Q2. Rank batsmen by runs in each match
+
+SELECT Match_Id , Striker_Id ,
+SUM(Batsman_Scored ) AS Runs,
+DENSE_RANK () 
+OVER(PARTITION BY Match_Id 
+ORDER BY SUM(Batsman_Scored) DESC ) AS
+ Rank_In_Match
+FROM ipl_table
+GROUP BY Match_Id , Striker_Id ;
+
+-- Q3. Previous over's runs using LAG
+
+SELECT Match_Id , Innings_Id , Over_Id ,
+SUM(Batsman_Scored + Extra_Runs) AS This_over,
+LAG(SUM(Batsman_Scored + Extra_Runs))
+OVER(PARTITION BY Match_Id , Innings_Id 
+ORDER BY Over_Id) AS Prev_Over
+FROM ipl_table
+GROUP BY Match_Id , Innings_Id , Over_Id ; 
+
+-- Q4. Next over's runs using LEAD
+
+SELECT Match_Id , Innings_Id , Over_Id ,
+SUM(Batsman_Scored + Extra_Runs) AS This_Over,
+LEAD(SUM(Batsman_Scored + Extra_Runs )) 
+OVER(PARTITION BY Match_Id , Innings_Id 
+ORDER BY Over_Id ) AS Next_Over
+FROM ipl_table
+GROUP BY Match_Id , Innings_Id , Over_Id;
+
+-- Q5. Divide batsmen into 4 performance groups
+
+SELECT Striker_Id,
+SUM(Batsman_Scored ) AS Runs,
+NTILE(4) 
+OVER(ORDER BY SUM(Batsman_Scored) DESC) AS Quartile
+FROM ipl_table
+GROUP BY Striker_Id;
+
+-- Q6. Each over % contribution to innings total
+
+SELECT Match_Id , Innings_Id , Over_Id,
+SUM(Batsman_Scored + Extra_Runs ) AS Over_Runs,
+ROUND(SUM(Batsman_Scored + Extra_Runs ) * 100 /
+SUM(SUM(Batsman_Scored + Extra_Runs))
+OVER(PARTITION BY Match_Id , Innings_Id),2) AS PCT
+FROM ipl_table
+GROUP BY Match_Id , Innings_Id , Over_Id ;
+
+-- Q7. Batsman's best and worst innings
+
+SELECT DISTINCT Striker_Id , 
+FIRST_VALUE ( SUM(Batsman_Scored ))
+OVER(PARTITION BY Striker_Id 
+ORDER BY SUM(Batsman_Scored) DESC
+ROWS BETWEEN UNBOUNDED PRECEDING AND
+UNBOUNDED FOLLOWING) AS Best_Innings,
+
+LAST_VALUE ( SUM(Batsman_Scored ))
+OVER(PARTITION BY Striker_Id 
+ORDER BY SUM(Batsman_Scored) DESC
+ROWS BETWEEN UNBOUNDED PRECEDING AND
+UNBOUNDED FOLLOWING) AS Worst_Innings
+FROM ipl_table
+GROUP BY Match_Id , Innings_Id , Striker_Id;
+
+-- Q8. Rolling 3-over average run rate
+
+SELECT  Match_Id ,Innings_Id , Over_Id ,
+SUM(Batsman_Scored + Extra_Runs) AS Over_Runs,
+ROUND(AVG(SUM(Batsman_Scored + Extra_Runs ))
+OVER (PARTITION BY Match_Id , Innings_Id 
+ORDER BY Over_Id 
+ROWS BETWEEN 2 PRECEDING AND 
+CURRENT ROW),2) AS Rolling_3_Avg
+FROM ipl_table
+GROUP BY Match_Id , Innings_Id , Over_Id; 
+
+-- Q9. Cumulative wickets with ROW_NUMBER
+-- per wicket
+
+SELECT  Match_Id ,Innings_Id , Over_Id , Ball_Id ,
+Dissimal_Type ,
+ROW_NUMBER()
+OVER(PARTITION BY Match_Id , Innings_Id 
+ORDER BY Over_Id , Ball_Id ) AS Wickets_Number
+FROM ipl_table
+WHERE Player_dissmial_id IS NOT NULL;
+
+
+
+
+
+
+
