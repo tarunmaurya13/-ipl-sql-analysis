@@ -256,7 +256,7 @@ mysql -u root -p ipl < beginner/01_total_runs_per_match.sql
 ## 👤 Author
 
 **Your Name**
-- GitHub: [Tarun_16](https://github.com/your_username)
+- GitHub: [Tarun_16](https://github.com/tarunmaurya13)
 - LinkedIn: [](https://www.linkedin.com/in/tarun-maurya-2010272a7/)
 
 ---
