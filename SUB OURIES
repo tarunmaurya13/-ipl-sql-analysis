@@ -1,1 +1,107 @@
 
+------------------------------------------
+SUB QURIES
+
+------------------------------------------
+
+-- Q1. Batsmen who scored more than average runs
+SELECT Striker_Id,
+    SUM(Batsman_Scored)                  AS Total_Runs
+FROM ipl_table
+GROUP BY Striker_Id
+HAVING SUM(Batsman_Scored) > (
+    SELECT AVG(Total)                    -- Subquery
+    FROM (
+        SELECT SUM(Batsman_Scored) AS Total
+        FROM ipl_table
+        GROUP BY Striker_Id
+    ) X
+);
+
+
+-- Q2. Match with highest total runs (scalar subquery)
+SELECT Match_Id,
+    SUM(Batsman_Scored + Extra_Runs)     AS Total_Runs
+FROM ipl_table
+GROUP BY Match_Id
+HAVING Total_Runs = (
+    SELECT MAX(Total)
+    FROM (
+        SELECT SUM(Batsman_Scored + Extra_Runs) AS Total
+        FROM ipl_table
+        GROUP BY Match_Id
+    ) X
+);
+
+-- Q3. Bowlers who NEVER took a wicket (NOT IN)
+SELECT DISTINCT Bowler_Id
+FROM ipl_table
+WHERE Bowler_Id NOT IN (
+    SELECT DISTINCT Bowler_Id
+    FROM ipl_table
+    WHERE Player_dissmial_id IS NOT NULL
+);
+
+-- Q4. Top scorer per match using subquery
+SELECT Match_Id, Striker_Id, Total_Runs
+FROM (
+    SELECT Match_Id, Striker_Id,
+        SUM(Batsman_Scored)              AS Total_Runs,
+        RANK() OVER(PARTITION BY Match_Id 
+             ORDER BY SUM(Batsman_Scored) DESC) AS RNK
+    FROM ipl_table
+    GROUP BY Match_Id, Striker_Id
+) X
+WHERE RNK = 1;
+
+-- Q5. Batsmen who scored more in 2nd innings than 1st
+SELECT Striker_Id, Inn1_Runs, Inn2_Runs
+FROM (
+    SELECT Striker_Id,
+        SUM(CASE WHEN Innings_Id=1 
+            THEN Batsman_Scored ELSE 0 END) AS Inn1_Runs,
+        SUM(CASE WHEN Innings_Id=2 
+            THEN Batsman_Scored ELSE 0 END) AS Inn2_Runs
+    FROM ipl_table
+    GROUP BY Striker_Id
+) X
+WHERE Inn2_Runs > Inn1_Runs
+ORDER BY Inn2_Runs DESC;
+
+-- Q6. Match where winning team had lower powerplay score
+SELECT Match_Id, Match_Winner_Id,
+    Winner_PP, Loser_PP
+FROM (
+    SELECT Match_Id, Match_Winner_Id,
+        SUM(CASE WHEN Team_Batting_Id = Match_Winner_Id 
+            AND Over_Id <= 6 
+            THEN Batsman_Scored + Extra_Runs ELSE 0 END) AS Winner_PP,
+        SUM(CASE WHEN Team_Batting_Id != Match_Winner_Id 
+            AND Over_Id <= 6 
+            THEN Batsman_Scored + Extra_Runs ELSE 0 END) AS Loser_PP
+    FROM ipl_table
+    GROUP BY Match_Id, Match_Winner_Id
+) X
+WHERE Winner_PP < Loser_PP;
+
+-- Q7. Matches where extras > 20 (subquery in FROM)
+SELECT *
+FROM (
+    SELECT Match_Id,
+        SUM(Extra_Runs)                  AS Total_Extras
+    FROM ipl_table
+    GROUP BY Match_Id
+) X
+WHERE Total_Extras > 20
+ORDER BY Total_Extras DESC;
+
+-- Q8. EXISTS — Matches that had a six in powerplay
+SELECT DISTINCT Match_Id
+FROM ipl_table t1
+WHERE EXISTS (
+    SELECT 1
+    FROM ipl_table t2
+    WHERE t2.Match_Id = t1.Match_Id
+      AND t2.Over_Id  <= 6
+      AND t2.Batsman_Scored = 6
+);
