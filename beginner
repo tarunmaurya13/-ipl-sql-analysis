@@ -1,0 +1,107 @@
+USE ipl;
+
+-- Q1. Total runs scored in entire tournament
+
+SELECT SUM(Batsman_Scored + Extra_Runs) AS T_runs
+FROM ipl_table;
+
+-- Q2. Average runs per ball in each innings
+
+SELECT  Innings_Id ,
+ROUND(AVG(Batsman_Scored),2) AS Avg_Run
+FROM ipl_table
+GROUP BY Innings_Id;
+
+-- Q3. Count total balls bowled per bowler
+
+SELECT Bowler_Id , 
+COUNT(*) AS Ball_bowl
+FROM ipl_table
+GROUP BY Bowler_Id 
+ORDER BY Ball_bowl DESC;
+
+-- Q4. Highest and lowest score in a single over
+
+SELECT Match_Id , Over_Id ,
+MAX(Batsman_Scored + Extra_Runs) AS Max_Runs,
+MIN(Batsman_Scored + Extra_Runs) AS Min_Runs
+FROM ipl_table
+GROUP BY Match_Id , Over_Id
+LIMIT 5;
+
+-- Q5. Total extras per match
+
+SELECT Match_Id , 
+SUM(Extra_Runs)  AS T_Runs,
+COUNT(CASE WHEN Extra_Type = 'wide' THEN 1 END) AS 
+Wides ,
+COUNT(CASE WHEN Extra_Type = 'noball' THEN 1 END) AS
+Noballs
+FROM ipl_table
+GROUP BY Match_Id;
+
+-- Q6. Bowlers with more than 10 wickets (HAVING)
+
+SELECT Bowler_Id , 
+COUNT(Player_dissmial_id) AS Wickets
+FROM ipl_table
+WHERE Dissimal_Type NOT IN ('run out' ,
+'retired out')
+GROUP BY Bowler_Id
+HAVING Wickets > 10
+ORDER BY Wickets DESC;
+
+-- Q7. Economy rate per bowler (min 10 overs)
+
+SELECT Bowler_Id ,
+COUNT(DISTINCT Over_Id ) AS Overs,
+ROUND(SUM(Batsman_Scored + Extra_Runs) / 
+COUNT(DISTINCT Over_Id),2) AS Economy 
+FROM ipl_table
+GROUP BY Bowler_Id
+HAVING Overs >= 10
+ORDER BY Economy ASC;
+
+-- Q8. Runs scored in each phase of the game
+
+SELECT 
+       CASE 
+            WHEN Over_Id BETWEEN 1 AND 6 THEN 'PowerPlay'
+            WHEN Over_Id BETWEEN 7 AND 14   THEN 'Middle'
+            WHEN Over_Id BETWEEN 15 AND 20 THEN 'Death'
+            END AS Phase ,
+       SUM(Batsman_Scored + Extra_Runs) AS T_Runs,
+       ROUND(AVG(Batsman_Scored + Extra_Runs)*6,2)
+       AS Run_Rate
+       FROM ipl_table
+       GROUP BY Phase;
+       
+-- Q9. Percentage of dot balls per bowler
+
+SELECT Bowler_Id , 
+COUNT(*) AS Total_Balls,
+COUNT(CASE WHEN Batsman_Scored = 0 AND Extra_Runs=0
+THEN 1 END) AS Dot_balls,
+ROUND(COUNT(CASE WHEN Batsman_Scored = 0 AND 
+Extra_Runs = 0 THEN 1 END ) * 100.0 / COUNT(*) , 2)
+AS Dot_Percentage
+FROM ipl_table
+GROUP BY Bowler_Id 
+ORDER BY Dot_Pct DESC; 
+
+-- Q10. Batting average (runs per dismissal)
+
+SELECT Striker_Id , 
+SUM(Batsman_Scored) AS Total_Runs,
+COUNT(Player_dissmial_id)  AS Dissimal,
+ROUND(SUM(Batsman_Scored) / 
+NULLIF (COUNT(Player_dissmial_id ) , 0) ,2) AS B_Avg
+FROM ipl_table
+GROUP BY Striker_Id 
+ORDER BY B_Avg DESC;    
+
+
+
+
+
+
