@@ -1,0 +1,103 @@
+USE ipl;
+
+
+-- JOINS -- 
+
+-- Q1. Bowler name with wickets
+
+SELECT p.Player_Name ,
+COUNT(i.Player_dissmial_id ) AS Wickets
+FROM ipl_table i
+JOIN player p ON i.Bowler_Id = p.Player_Id 
+WHERE i.Dissimal_Type  NOT IN  ('run out' , 
+'retired out') 
+GROUP BY p.Player_Name 
+ORDER BY Wickets DESC
+LIMIT 10;
+
+-- ✅ Q2. INNER JOIN — Batsman Name With Total Runs
+
+SELECT p.Player_Name,
+SUM(i.Batsman_Scored ) AS Total_Runs
+FROM ipl_table i 
+INNER JOIN player p ON i.Striker_Id = p.Player_Id 
+GROUP BY p.Player_Name 
+ORDER BY Total_Runs DESC
+LIMIT 10;
+
+-- ✅ Q2. LEFT JOIN — All Players Even if Never Batted
+
+SELECT p.Player_Name ,
+COALESCE(SUM(i.Batsman_Scored), 0 ) AS Total_runs
+FROM player p
+LEFT JOIN ipl_table i 
+ON p.Player_Id = i.Striker_Id 
+GROUP BY p.Player_Name 
+ORDER BY Total_runs DESC;
+
+-- ✅ Q3. SELF JOIN — Batsmen Who Batted Together
+
+SELECT p1.Player_Name AS B1,
+        p2.Player_Name AS B2,
+        COUNT(*) AS Balls_Together
+FROM ipl_table i
+JOIN player p1 ON i.Striker_Id = p1.Player_Id        
+JOIN player p2 ON i.Non_Striker_Id = p2.Player_Id
+GROUP BY p1.Player_Name , p2.Player_Name
+ORDER BY Balls_Together DESC
+LIMIT 10;
+
+-- ✅ Q4. Fielder Who Took Most Catches
+
+SELECT p.Player_Name ,
+COUNT(*) AS Catches
+FROM ipl_table i 
+JOIN player p ON i.Fielder_id = p.Player_Id
+WHERE i.Dissimal_Type = "caught"
+GROUP BY p.Player_Name
+ORDER BY Catches DESC
+LIMIT 5;
+
+-- ✅ Q5. Batsman vs Bowler Head to Head
+
+SELECT 
+bat.Player_Name AS Batsman ,
+bowl.Player_Name AS Bowler,
+SUM(i.Batsman_Scored ) AS Run_Scor,
+COUNT(*) AS Balls_Faced,
+ROUND(SUM(i.Batsman_Scored ) / 
+NULLIF (COUNT(*) ,0) * 100 , 2) AS Strike_Rate
+FROM ipl_table i
+JOIN player bat ON i.Striker_Id = bat.Player_Id
+JOIN player bowl ON i.Bowler_Id = bowl.Player_Id
+GROUP BY bat.Player_Name , bowl.Player_Name
+ORDER BY Run_Scor DESC
+LIMIT 20;
+ 
+ 
+--  ✅ Q6. Country-wise Total Runs
+--  (Using Player Country)
+
+SELECT p.Country ,
+COUNT(DISTINCT p.Player_Id) AS Players ,
+SUM(i.Batsman_Scored ) AS Total_Runs,
+ROUND(AVG(i.Batsman_Scored) , 2 ) AS Avg_Runs
+FROM ipl_table i
+JOIN player p ON i.Striker_Id = p.Player_Id 
+GROUP BY p.Country
+ORDER BY Total_Runs DESC;
+
+-- ✅ Q7. Left vs Right Hand Batsmen Performance
+
+SELECT p.Batting_Hand ,
+COUNT(DISTINCT p.Player_Id) AS Total_Bat,
+SUM(i.Batsman_Scored ) AS Total_Runs,
+ROUND(SUM(i.Batsman_Scored) / NULLIF
+(COUNT(*) , 0) * 100 ,2)AS Strike_Rate,
+ROUND(AVG(i.Batsman_Scored),2) AS Avg_Per_Ball
+FROM ipl_table i
+JOIN player p ON i.Striker_Id = p.Player_Id
+GROUP BY p.Batting_Hand
+ORDER BY Total_Runs DESC;
+
+
